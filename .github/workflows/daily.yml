@@ -1,10 +1,9 @@
 name: daily-snapshot
 
 on:
-  schedule:
-    # 每天 00:10 UTC（北京时间 08:10）抓一次
-    - cron: '10 0 * * *'
-  workflow_dispatch:        # 也可以在网页上手动触发
+  # 定时任务已关闭：GitHub 的 runner 在境外，连不上 steamdt（SSL 握手超时）。
+  # 抓取改在本机跑（见 README「本机定时」），这里只保留手动触发，避免每天红一次。
+  workflow_dispatch:
 
 permissions:
   contents: write
