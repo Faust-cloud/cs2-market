@@ -37,11 +37,38 @@ SteamDT 网页端的公开接口：
 它随时可能改、可能加验证、可能失效。这个项目按「随时会坏」的前提设计：
 数据全部落盘成 JSON，接口哪天挂了，已经记录的日期依然能看。
 
-## 自动抓取
+## 为什么定时任务在本机跑，不在 GitHub Actions
 
-`.github/workflows/daily.yml`：每天 08:10（北京时间）跑一次，抓到新数据就提交到 `data/`。
+一开始是挂在 Actions 上的，实测失败：
 
-也可以在 Actions 页面手动点 **Run workflow**。
+```
+RuntimeError: /api/index/statistics/v1/summary 重试 3 次仍失败：
+网络错误 <urlopen error _ssl.c:999: The handshake operation timed out>
+```
+
+GitHub 的 runner 在境外，到 `www.steamdt.com` 的 TLS 握手直接超时 —— 是地域限制，不是代码问题。
+所以 `.github/workflows/daily.yml` 只保留了手动触发，定时抓取改在本机做。
+
+### 本机定时（macOS launchd）
+
+```bash
+# 每天 08:10 抓一次并推送（把 TOKEN 换成自己的）
+cat > ~/Library/LaunchAgents/com.faust.cs2market.plist <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.faust.cs2market</string>
+  <key>ProgramArguments</key><array>
+    <string>/usr/bin/python3</string><string>REPO_PATH/fetch.py</string>
+  </array>
+  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>10</integer></dict>
+  <key>RunAtLoad</key><false/>
+</dict></plist>
+PLIST
+launchctl load ~/Library/LaunchAgents/com.faust.cs2market.plist
+```
+
+抓完还需要把 `data/` 推上去（`publish.py` 里的推送部分可以复用）。
 
 ## 本地跑
 
